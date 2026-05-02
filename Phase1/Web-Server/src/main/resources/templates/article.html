@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="article">
+
+        <div class="article-title">
+            {{title}}
+        </div>
+
+        <div class="article-abstract">
+            <b>Abstract:</b><br>
+            {{abstract}}
+        </div>
+
+        <div style="margin-top:15px;">
+            <b>Body:</b><br><br>
+            {{body}}
+        </div>
+
+        <div style="margin-top:15px; color:#777;">
+            <b>Citations:</b> {{citations}}
+        </div>
+
+    </div>
+
+    <div class="references">
+        <h3>References</h3>
+        {{references}}
+    </div>
+
+    <br>
+    <a href="/"><button>Back to Home</button></a>
+
+</div>
+
+</body>
+</html>

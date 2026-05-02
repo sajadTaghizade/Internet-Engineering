@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Articles</h1>
+
+    <a href="/add"><button>Add New Article</button></a>
+    <br><br>
+
+    <div class="search-box">
+        <form method="GET" action="/">
+            <input type="text" name="q" placeholder="Search..." value="{{query}}">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <hr>
+
+    <div class="articles">
+        {{articles}}
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Add Article</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Add New Article</h1>
+
+    <form method="POST" action="/add">
+
+        <label>Title</label><br>
+        <input type="text" name="title"><br>
+
+        <label>Abstract</label><br>
+        <input type="text" name="abs"><br>
+
+        <label>Body</label><br>
+        <textarea name="body"></textarea><br>
+
+        <div class="references">
+            <h3>Select References</h3>
+            {{references}}
+        </div>
+
+        <br>
+        <button type="submit">Submit Article</button>
+
+    </form>
+
+    <br>
+    <a href="/"><button>Back to Home</button></a>
+
+</div>
+</body>
+</html>
