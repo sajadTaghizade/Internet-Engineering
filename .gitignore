@@ -1,0 +1,12 @@
+# Java / Maven
+target/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# Secrets (Phase6 docker-compose reads these; only .env.example is committed)
+.env
