@@ -47,8 +47,12 @@ export default function ProfilePage() {
   }
 
   const onLogout = () => {
-    logout()
+    // Navigate away from this protected route *before* clearing the user so
+    // ProtectedRoute never renders with user=null while still mounted on
+    // /profile -- otherwise it redirects to /login with a "from: /profile"
+    // state that then hijacks the next login's redirect.
     navigate('/')
+    logout()
   }
 
   return (
@@ -101,7 +105,7 @@ export default function ProfilePage() {
       </form>
 
       <div>
-        <button onClick={onLogout}>Logout</button>
+        <button className="btn-primary" onClick={onLogout}>Logout</button>
       </div>
 
       <section>
