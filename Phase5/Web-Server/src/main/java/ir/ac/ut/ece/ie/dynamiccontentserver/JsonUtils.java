@@ -1,7 +1,7 @@
 package ir.ac.ut.ece.ie.dynamiccontentserver;
 
+import ir.ac.ut.ece.ie.dto.UserDto;
 import ir.ac.ut.ece.ie.model.Article;
-import ir.ac.ut.ece.ie.model.User;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -149,14 +149,14 @@ public final class JsonUtils {
         return json.toString();
     }
 
-    public static String authResponseToJson(String token, User user) {
+    public static String authResponseToJson(String token, UserDto user) {
         return "{\"data\":{"
                 + "\"token\":" + quote(token) + ","
                 + "\"user\":" + userToJson(user)
                 + "}}";
     }
 
-    public static String userToJson(User user) {
+    public static String userToJson(UserDto user) {
         if (user == null) {
             return "null";
         }

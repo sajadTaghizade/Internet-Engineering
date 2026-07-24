@@ -1,6 +1,6 @@
 package ir.ac.ut.ece.ie.dynamiccontentserver;
 
-import ir.ac.ut.ece.ie.model.User;
+import ir.ac.ut.ece.ie.dto.UserDto;
 import ir.ac.ut.ece.ie.security.AuthGuard;
 import ir.ac.ut.ece.ie.security.JwtUtil;
 
@@ -25,7 +25,7 @@ public class ProfileController implements WebPage {
             return HttpResponse.unauthorized(JsonUtils.error("Authentication required"));
         }
 
-        User user = userService.getById(claims.getUserId());
+        UserDto user = userService.getById(claims.getUserId());
         if (user == null) {
             return HttpResponse.unauthorized(JsonUtils.error("Authentication required"));
         }

@@ -56,7 +56,7 @@ public class ArticleController implements WebPage {
         }
 
         ArticleService.CreateArticleResult result = articleService.createArticle(
-                title, articleAbstract, body, references, claims.getUserId(), claims.getUsername());
+                title, articleAbstract, body, references, claims.getUserId());
 
         switch (result.getStatus()) {
             case SUCCESS:

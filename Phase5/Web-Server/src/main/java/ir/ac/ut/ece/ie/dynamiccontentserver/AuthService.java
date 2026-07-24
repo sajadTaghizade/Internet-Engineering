@@ -1,5 +1,6 @@
 package ir.ac.ut.ece.ie.dynamiccontentserver;
 
+import ir.ac.ut.ece.ie.dto.UserDto;
 import ir.ac.ut.ece.ie.model.User;
 import ir.ac.ut.ece.ie.repository.UserRepository;
 import ir.ac.ut.ece.ie.security.JwtUtil;
@@ -42,7 +43,7 @@ public class AuthService {
         User savedUser = userRepository.save(user);
 
         String token = jwtUtil.generateToken(savedUser.getId(), savedUser.getUsername());
-        return AuthResult.success(savedUser, token);
+        return AuthResult.success(UserDto.from(savedUser), token);
     }
 
     public AuthResult login(String username, String password) {
@@ -56,7 +57,7 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
-        return AuthResult.success(user, token);
+        return AuthResult.success(UserDto.from(user), token);
     }
 
     private String validateRegistration(String username, String password, String email, String phone) {
@@ -91,17 +92,17 @@ public class AuthService {
 
         private final Status status;
         private final String message;
-        private final User user;
+        private final UserDto user;
         private final String token;
 
-        private AuthResult(Status status, String message, User user, String token) {
+        private AuthResult(Status status, String message, UserDto user, String token) {
             this.status = status;
             this.message = message;
             this.user = user;
             this.token = token;
         }
 
-        public static AuthResult success(User user, String token) {
+        public static AuthResult success(UserDto user, String token) {
             return new AuthResult(Status.SUCCESS, null, user, token);
         }
 
@@ -125,7 +126,7 @@ public class AuthService {
             return message;
         }
 
-        public User getUser() {
+        public UserDto getUser() {
             return user;
         }
 

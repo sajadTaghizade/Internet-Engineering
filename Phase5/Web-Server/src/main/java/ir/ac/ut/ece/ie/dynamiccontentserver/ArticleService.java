@@ -1,7 +1,9 @@
 package ir.ac.ut.ece.ie.dynamiccontentserver;
 
 import ir.ac.ut.ece.ie.model.Article;
+import ir.ac.ut.ece.ie.model.User;
 import ir.ac.ut.ece.ie.repository.ArticleRepository;
+import ir.ac.ut.ece.ie.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -12,9 +14,11 @@ import java.util.List;
 public class ArticleService {
 
     private final ArticleRepository articleRepository;
+    private final UserRepository userRepository;
 
-    public ArticleService(ArticleRepository articleRepository) {
+    public ArticleService(ArticleRepository articleRepository, UserRepository userRepository) {
         this.articleRepository = articleRepository;
+        this.userRepository = userRepository;
     }
 
     public List<Article> listArticles(String query) {
@@ -52,7 +56,7 @@ public class ArticleService {
     }
 
     public List<Article> listArticlesByAuthor(int authorId) {
-        List<Article> articles = new ArrayList<>(articleRepository.findByAuthorId(authorId));
+        List<Article> articles = new ArrayList<>(articleRepository.findByAuthor_Id(authorId));
         sortArticles(articles);
         return articles;
     }
@@ -74,7 +78,7 @@ public class ArticleService {
     }
 
     public CreateArticleResult createArticle(String title, String articleAbstract, String body, List<Integer> referenceIds,
-                                              int authorId, String authorUsername) {
+                                              int authorId) {
         if (title == null || title.isBlank() || articleAbstract == null || articleAbstract.isBlank() || body == null || body.isBlank()) {
             return CreateArticleResult.validationError("Fields 'title', 'abstract', and 'body' are required");
         }
@@ -83,7 +87,12 @@ public class ArticleService {
             return CreateArticleResult.conflict("Article with this title already exists");
         }
 
-        Article article = new Article(title, articleAbstract, body, authorId, authorUsername);
+        User author = userRepository.findById(authorId).orElse(null);
+        if (author == null) {
+            return CreateArticleResult.validationError("Author account not found");
+        }
+
+        Article article = new Article(title, articleAbstract, body, author);
         List<Integer> safeReferences = referenceIds == null ? new ArrayList<>() : new ArrayList<>(referenceIds);
 
         for (Integer referenceId : safeReferences) {

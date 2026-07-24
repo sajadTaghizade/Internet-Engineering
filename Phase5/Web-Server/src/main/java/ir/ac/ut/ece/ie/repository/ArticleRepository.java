@@ -11,5 +11,5 @@ public interface ArticleRepository extends JpaRepository<Article, Integer> {
 
     boolean existsByTitle(String title);
 
-    List<Article> findByAuthorId(int authorId);
+    List<Article> findByAuthor_Id(int authorId);
 }

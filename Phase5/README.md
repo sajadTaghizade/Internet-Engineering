@@ -29,11 +29,13 @@
 
 **فایل‌های تغییر‌یافته نسبت به فاز ۴**
 
-- `model/Article.java`: دو فیلد `authorId` و `authorUsername` اضافه شد تا مشخص باشد هر مقاله را
-  چه کاربری منتشر کرده و بتوان در پروفایل، مقالات کاربر را لیست کرد.
-- `repository/ArticleRepository.java`: متد `findByAuthorId` اضافه شد.
-- `dynamiccontentserver/ArticleService.java`: `createArticle` اکنون `authorId`/`authorUsername` را
-  می‌گیرد و متد `listArticlesByAuthor` برای صفحه‌ی پروفایل اضافه شده است.
+- `model/Article.java`: فیلد `author` (رابطه‌ی `@ManyToOne` به `User`، با `@JoinColumn(name = "author_id")`)
+  اضافه شد تا مشخص باشد هر مقاله را چه کاربری منتشر کرده و بتوان در پروفایل، مقالات کاربر را لیست کرد.
+  `getAuthorId()`/`getAuthorUsername()` اکنون از روی همین رابطه محاسبه می‌شوند (نه ستون‌های خام جدا).
+- `repository/ArticleRepository.java`: متد `findByAuthor_Id` اضافه شد (روی رابطه‌ی `author`).
+- `dynamiccontentserver/ArticleService.java`: `createArticle` اکنون فقط `authorId` را می‌گیرد، خودش
+  `User` را از `UserRepository` پیدا می‌کند و به‌عنوان رابطه‌ی entity به `Article` وصل می‌کند؛ متد
+  `listArticlesByAuthor` برای صفحه‌ی پروفایل اضافه شده است.
 - `dynamiccontentserver/ArticleController.java`: `POST /api/articles` اکنون نیازمند JWT معتبر است؛
   در غیر این صورت `401` برمی‌گرداند. استخراج فیلدهای JSON از منطق تکراری داخل کنترلر به `JsonUtils`
   منتقل شد (حذف کد تکراری، چون همان منطق در کنترلرهای جدید هم لازم بود).
@@ -164,3 +166,41 @@ npm run dev
   باگ Component Scan (بالا) کشف و رفع شد. فرانت‌اند هم با `npm run build` بدون خطا build شد.
 - تنها چیزی که در sandbox این نشست قابل تست نبود، خودِ Docker است (نبود دسترسی به Docker daemon)؛
   جزئیات در `Phase6/README.md` آمده است.
+
+## اصلاحات پس از بازخورد (DTO و رابطه‌ی مقاله↔کاربر)
+
+بعد از بازخورد روی نبودِ DTO و اشتباه بودن رابطه‌ی بین جدول‌ها، دو مورد زیر اصلاح شد:
+
+1. **رابطه‌ی `Article` ↔ `User`**: قبلاً `Article` دو ستون خام `authorId`/`authorUsername` داشت که
+   هیچ Foreign Key واقعی‌ای در دیتابیس بین `articles.author_id` و `users.id` نمی‌ساخت و علاوه‌بر آن
+   username کاربر را هم به‌صورت تکراری (denormalized) روی جدول `articles` ذخیره می‌کرد. این دو ستون
+   با یک رابطه‌ی واقعی JPA جایگزین شدند:
+   `model/Article.java`: `@ManyToOne @JoinColumn(name = "author_id") private User author;` — حالا
+   Hibernate یک Foreign Key واقعی روی `author_id` می‌سازد و username دیگر تکراری ذخیره نمی‌شود، بلکه
+   هر بار از طریق رابطه (`author.getUsername()`) خوانده می‌شود.
+   `repository/ArticleRepository.java`: `findByAuthorId` → `findByAuthor_Id` (کوئری روی رابطه).
+   `dynamiccontentserver/ArticleService.java`: `createArticle` دیگر `authorUsername` نمی‌گیرد؛ خودش
+   entity کاربر را از `UserRepository` می‌خواند و به مقاله وصل می‌کند.
+   `dynamiccontentserver/ArticleController.java`: فراخوانی `createArticle` مطابق امضای جدید.
+
+2. **DTO برای کاربر**: تا قبل از این، entity خام `User` (شامل `passwordHash`/`passwordSalt`) بین
+   Service و Controller رد و بدل می‌شد و سریالایز شدنش فقط به رعایت دستیِ `JsonUtils.userToJson`
+   وابسته بود. حالا یک کلاس `dto/UserDto.java` اضافه شده که اصلاً فیلد رمزعبور/سالت را ندارد (نه فقط
+   اینکه سریالایز نمی‌شود، بلکه از نظر کامپایلر هم قابل دسترس نیست)، و `UserDto.from(user)` مسئول
+   تبدیل entity به این DTO است.
+   `AuthService.AuthResult`، `UserService.UpdateResult` و `UserService.getById` اکنون `UserDto`
+   برمی‌گردانند، نه entity خام `User`.
+   `dynamiccontentserver/JsonUtils.java`: امضای `userToJson`/`authResponseToJson` از `User` به
+   `UserDto` تغییر کرد.
+   `dynamiccontentserver/ProfileController.java`: به‌جای گرفتن `User` entity، مستقیماً `UserDto`
+   می‌گیرد.
+
+`mvn compile` بعد از این تغییرات بدون خطا اجرا شد (تست کامپایل واقعی). تست end-to-end با
+دیتابیس واقعی (مثل تست فاز ۵ اصلی) در این نشست به‌خاطر نبود دسترسی به Docker daemon انجام نشد؛ قبل
+از دمو باید `docker compose down -v && docker compose up -d` بزنی (چون ستون‌های قدیمی
+`author_id`/`author_username` عوض شده‌اند و schema باید از نو ساخته شود) و یک بار کامل جریان
+ثبت‌نام → افزودن مقاله → پروفایل را با `curl` یا از فرانت چک کنی.
+
+نتیجه: بعد از `docker compose down -v && docker compose up -d` (برای ساخت schema تازه بدون ستون‌های
+قدیمی `author_id`/`author_username`)، `mvn spring-boot:run` دوباره اجرا و کل جریان (ثبت‌نام، ورود،
+افزودن مقاله، پروفایل) با `curl` تست شد و طبق انتظار کار کرد.
