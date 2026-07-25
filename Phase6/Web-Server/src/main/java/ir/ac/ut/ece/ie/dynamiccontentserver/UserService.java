@@ -1,5 +1,6 @@
 package ir.ac.ut.ece.ie.dynamiccontentserver;
 
+import ir.ac.ut.ece.ie.dto.UserDto;
 import ir.ac.ut.ece.ie.model.User;
 import ir.ac.ut.ece.ie.repository.UserRepository;
 import ir.ac.ut.ece.ie.security.PasswordUtil;
@@ -14,8 +15,8 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public User getById(int userId) {
-        return userRepository.findById(userId).orElse(null);
+    public UserDto getById(int userId) {
+        return userRepository.findById(userId).map(UserDto::from).orElse(null);
     }
 
     public UpdateResult updateContact(int userId, String email, String phone) {
@@ -51,7 +52,7 @@ public class UserService {
         user.setEmail(normalizedEmail);
         user.setPhone(normalizedPhone);
         User savedUser = userRepository.save(user);
-        return UpdateResult.success(savedUser);
+        return UpdateResult.success(UserDto.from(savedUser));
     }
 
     public UpdateResult changePassword(int userId, String currentPassword, String newPassword) {
@@ -72,7 +73,7 @@ public class UserService {
         user.setPasswordSalt(newSalt);
         user.setPasswordHash(PasswordUtil.hash(newPassword, newSalt));
         User savedUser = userRepository.save(user);
-        return UpdateResult.success(savedUser);
+        return UpdateResult.success(UserDto.from(savedUser));
     }
 
     public static class UpdateResult {
@@ -85,15 +86,15 @@ public class UserService {
 
         private final Status status;
         private final String message;
-        private final User user;
+        private final UserDto user;
 
-        private UpdateResult(Status status, String message, User user) {
+        private UpdateResult(Status status, String message, UserDto user) {
             this.status = status;
             this.message = message;
             this.user = user;
         }
 
-        public static UpdateResult success(User user) {
+        public static UpdateResult success(UserDto user) {
             return new UpdateResult(Status.SUCCESS, null, user);
         }
 
@@ -117,7 +118,7 @@ public class UserService {
             return message;
         }
 
-        public User getUser() {
+        public UserDto getUser() {
             return user;
         }
     }

@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.util.ArrayList;
@@ -39,11 +40,14 @@ public class Article {
 
     private int citationCount = 0;
 
-    @Column(name = "author_id")
-    private Integer authorId;
-
-    @Column(name = "author_username")
-    private String authorUsername;
+    /**
+     * Real JPA relationship to the publishing user (FK enforced at the database level via
+     * the author_id column), instead of storing a raw id/username pair. The username is no
+     * longer duplicated onto this table -- it is read through the relation via getAuthorUsername().
+     */
+    @ManyToOne
+    @JoinColumn(name = "author_id")
+    private User author;
 
     public Article() {
     }
@@ -55,10 +59,9 @@ public class Article {
         this.createdAt = System.currentTimeMillis();
     }
 
-    public Article(String title, String abs, String body, Integer authorId, String authorUsername) {
+    public Article(String title, String abs, String body, User author) {
         this(title, abs, body);
-        this.authorId = authorId;
-        this.authorUsername = authorUsername;
+        this.author = author;
     }
 
     public int getId() {
@@ -97,12 +100,16 @@ public class Article {
         this.citationCount++;
     }
 
+    public User getAuthor() {
+        return author;
+    }
+
     public Integer getAuthorId() {
-        return authorId;
+        return author == null ? null : author.getId();
     }
 
     public String getAuthorUsername() {
-        return authorUsername;
+        return author == null ? null : author.getUsername();
     }
 
 }

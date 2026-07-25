@@ -6,6 +6,12 @@
 اپلیکیشن (منطق auth/article) نسبت به فاز ۵ تغییری نکرده**؛ تنها دو تغییر کوچک لازم بود تا داخل
 Docker درست کار کند (پایین توضیح داده شده) — بقیه‌ی این فاز صرفاً زیرساخت Docker است.
 
+> **به‌روزرسانی:** بعداً در فاز ۵ دو اصلاح روی کد اعمال شد — رابطه‌ی `Article`↔`User` به یک
+> `@ManyToOne` واقعی (با Foreign Key در دیتابیس) تبدیل شد و یک لایه‌ی `UserDto` برای جلوگیری از
+> عبور مستقیم entity کاربر (شامل `passwordHash`/`passwordSalt`) بین لایه‌ها اضافه شد. همان دو
+> اصلاح روی سورس‌های جاوای `Phase6/Web-Server` هم اعمال شد (سورس‌های بک‌اند این فاز اکنون کاملاً با
+> `Phase5/Web-Server` یکسان‌اند)؛ جزئیات در بخش «همگام‌سازی با اصلاحات فاز ۵» پایین آمده.
+
 ## فایل‌های جدید
 
 | فایل | نقش |
@@ -39,6 +45,26 @@ Docker درست کار کند (پایین توضیح داده شده) — بقی
 - `.gitignore` (در ریشه‌ی ریپو): خط `.env` اضافه شد تا secret های واقعی هرگز commit نشوند.
 
 هیچ فایل دیگری (منطق Article/Auth/User، صفحات React، و غیره) نسبت به فاز ۵ تغییر نکرده است.
+
+## همگام‌سازی با اصلاحات فاز ۵ (DTO و رابطه‌ی مقاله↔کاربر)
+
+`Phase6/Web-Server` وقتی ساخته شد که هنوز `Phase5/Web-Server` دو ایراد داشت: رابطه‌ی `Article`↔`User`
+با دو ستون خام `authorId`/`authorUsername` (بدون Foreign Key واقعی) پیاده شده بود، و entity خام
+`User` (شامل `passwordHash`/`passwordSalt`) بین Service و Controller رد و بدل می‌شد. بعد از رفع این
+دو مورد در فاز ۵، همان فایل‌ها عیناً در `Phase6/Web-Server` هم جایگزین شدند تا کد بک‌اند این فاز با
+فاز ۵ کاملاً همگام بماند (تأیید شده با `diff -rq` بین `src/main/java` دو فاز):
+
+- `model/Article.java`, `repository/ArticleRepository.java`,
+  `dynamiccontentserver/ArticleService.java`, `dynamiccontentserver/ArticleController.java`:
+  رابطه‌ی `@ManyToOne` واقعی به `User` به‌جای ستون‌های خام.
+- `dto/UserDto.java` (فایل جدید)، `dynamiccontentserver/AuthService.java`,
+  `dynamiccontentserver/UserService.java`, `dynamiccontentserver/JsonUtils.java`,
+  `dynamiccontentserver/ProfileController.java`: عبور `UserDto` به‌جای entity خام `User` بین Service
+  و Controller.
+
+فایل‌های مخصوص فاز ۶ (`pom.xml`, `application.properties` با env varهای `DB_*`, `Dockerfile`,
+`docker-compose.yml`, `.env.example`) به این تغییرات نیازی نداشتند و دست‌نخورده ماندند، چون فقط به
+منطق دامنه مربوط بودند نه به نحوه‌ی اجرا/deploy.
 
 ## Backend Dockerization (`Dockerfile`)
 
@@ -156,18 +182,35 @@ docker compose up -d --build
 
 ## محدودیت‌های تست در این نشست
 
-- محیط sandboxی که این تغییرات در آن نوشته شده، به Docker daemon دسترسی نداشت (خطای
-  `dial unix /var/run/docker.sock: ... no such file or directory`)؛ بنابراین اجرای واقعی
-  `docker compose up` در همین‌جا ممکن نبود.
-- آنچه واقعاً تست/تایید شد:
-  - `docker compose config` با موفقیت `docker-compose.yml` را parse و متغیرهای `${...}` را
-    resolve کرد (هم حالت خطا وقتی `.env` نبود، هم حالت موفق با `.env.example`).
-  - `mvn package` با پلاگین جدید یک jar اجراشدنی واقعی ساخت (`target/dynamiccontentserver-*.jar`,
-    حدود ۴۰ مگابایت، شامل تمام dependency ها).
-  - همان jar با `java -jar` روی یک Postgres 16 واقعی (نصب محلی، بیرون از Docker) اجرا شد — دقیقاً
-    همان دستوری که Runtime stage در `Dockerfile` هم اجرا می‌کند — و کل جریان auth (که در
-    `Phase5/README.md` شرح داده شده) با موفقیت تکرار شد.
-  - `npm run build` برای فرانت‌اند بدون خطا اجرا شد (همان دستوری که Build stage در
-    `src/frontend/Dockerfile` اجرا می‌کند).
-- یعنی هر بخشی از pipeline که بدون خودِ Docker daemon قابل اجرا بود، واقعاً اجرا و تایید شد؛ تنها
-  چیزی که مستقیماً در این نشست verify نشد، مرحله‌ی نهایی `docker build`/`docker compose up` است.
+در نشستی که فایل‌های فاز ۶ اولیه نوشته شدند، اصلاً به Docker daemon دسترسی نبود. در این نشست (که
+اصلاحات فاز ۵ را همگام کرد)، یک Docker daemon واقعی در دسترس بود؛ آنچه واقعاً تست/تایید شد:
+
+- **کامپایل و پکیج بک‌اند**: بعد از همگام‌سازی فایل‌های جاوا، `mvn compile` و `mvn package
+  -DskipTests` هر دو بدون خطا روی `Phase6/Web-Server` اجرا شدند و یک jar اجراشدنی واقعی ساختند
+  (`target/dynamiccontentserver-1.0.0-SNAPSHOT.jar`, ~۴۲ مگابایت).
+- **تست end-to-end واقعی روی Postgres واقعی (بدون Docker)**: همان jar با `java -jar` (دقیقاً همان
+  دستوری که Runtime stage در `Dockerfile` هم اجرا می‌کند) روی یک Postgres 16 نصب‌شده محلی اجرا شد.
+  با بررسی مستقیم اسکیمای ساخته‌شده (`\d articles` در psql) تأیید شد که یک **Foreign Key واقعی**
+  (`articles.author_id → users.id`) ساخته شده و ستون تکراری `author_username` دیگر وجود ندارد.
+  سپس کل جریان با `curl` تست شد: ثبت‌نام، رد ثبت‌نام تکراری (۴۰۹)، رد رمزعبور ضعیف (۴۰۰)، ورود، رد
+  ایجاد مقاله بدون توکن (۴۰۱) و موفقیت آن با توکن (که `authorId`/`authorUsername` را درست از روی
+  رابطه‌ی جدید در پاسخ نشان داد)، `GET /api/articles` و `GET /api/articles/{id}` بدون نیاز به لاگین،
+  `GET /api/users/me` (پروفایل + مقالات کاربر، از طریق `UserDto`)، ویرایش ایمیل/تلفن، و تغییر
+  رمزعبور (رد رمز فعلی اشتباه، تأیید رمز جدید، رد لاگین با رمز قدیمی، موفقیت لاگین با رمز جدید).
+  همه‌ی این موارد طبق انتظار جواب دادند.
+- **فرانت‌اند**: `npm install` و `npm run build` روی `src/frontend` بدون خطا اجرا شدند.
+- **اعتبارسنجی `docker-compose.yml`**: `docker compose config` هم حالت خطا (وقتی `.env` نیست، پیغام
+  واضح `Set POSTGRES_PASSWORD in .env, see .env.example` را نشان می‌دهد) و هم حالت موفق (با یک
+  `.env` تستی، تمام متغیرهای `${...}` درست resolve شدند) را تأیید کرد.
+- **اجرای واقعی `docker compose up --build`**: با Docker daemon واقعی امتحان شد، اما در همان قدم
+  اول (`Image postgres:16-alpine Pulling`) با خطای `403 Forbidden` از
+  `production.cloudfront.docker.com` متوقف شد. این خطا مربوط به کد یا تنظیمات این پروژه نیست؛ خروجی
+  endpoint وضعیت پراکسیِ همین محیط sandbox (`/__agentproxy/status`) این را صراحتاً به‌عنوان یک
+  **policy denial** در سطح شبکه‌ی سازمانی گزارش می‌دهد (`connect_rejected`، `gateway answered 403 to
+  CONNECT`، host: `production.cloudfront.docker.com:443`) — یعنی pull از Docker Hub برای این sandbox
+  عمداً مسدود است، نه اینکه `Dockerfile`/`docker-compose.yml` مشکلی داشته باشند.
+- **نتیجه**: تمام بخش‌های pipeline که به pull کردن image از یک رجیستری بیرونی وابسته نبودند
+  (کامپایل، پکیج، اجرای واقعی jar روی Postgres واقعی، build فرانت‌اند، پارس/resolve شدن
+  docker-compose) عملاً اجرا و تأیید شدند. تنها گام تأییدنشده، خودِ `docker build`/`docker compose
+  up` به‌خاطر بلاک‌شدن Docker Hub در سطح شبکه‌ی این sandbox است — این محدودیت محیط اجراست، نه یک
+  نقص در فایل‌های فاز ۶.
